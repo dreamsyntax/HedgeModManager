@@ -37,7 +37,7 @@ public class UpdateSourceGMI : IUpdateSource
     public async Task PerformUpdateAsync(IProgress<long>? progress, CancellationToken cancellationToken)
     {
         Logger.Debug("Downloading command list...");
-        var response = await Client.GetAsync(CommandListFileName, cancellationToken).ConfigureAwait(false);
+        var response = await Client.GetAsync(Url + "/" + CommandListFileName, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         string text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -98,7 +98,7 @@ public class UpdateSourceGMI : IUpdateSource
         {
             case "add":
                 Logger.Information($"Downloading {path}...");
-                var data = await Client.GetByteArrayAsync(Helpers.EncodeURL(path), cancellationToken);
+                var data = await Client.GetByteArrayAsync(Url + "/" + Helpers.EncodeURL(path), cancellationToken);
                 if (cancellationToken.IsCancellationRequested)
                     return;
                 string filePath = Path.Combine(Mod.Root, path);

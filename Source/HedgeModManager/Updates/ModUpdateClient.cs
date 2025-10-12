@@ -34,7 +34,7 @@ public class ModUpdateClient : HttpClient
         await FillCache(cancellationToken);
         if (!string.IsNullOrEmpty(mCache.ChangelogPath))
         {
-            var response = await GetAsync(mCache.ChangelogPath, cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync(BaseAddress + "/" + mCache.ChangelogPath, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 mCache.Changelog = string.Empty;
@@ -54,7 +54,7 @@ public class ModUpdateClient : HttpClient
 
     private async Task FillCache(CancellationToken cancellationToken)
     {
-        var response = await GetAsync(VersionFileName, cancellationToken).ConfigureAwait(false);
+        var response = await GetAsync(BaseAddress + "/" + VersionFileName, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var info = Ini.FromText(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
