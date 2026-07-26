@@ -10,16 +10,17 @@
              x:DataType="vm:MainWindowViewModel"
              Loaded="OnLoaded"
              Background="{DynamicResource BackgroundL0Brush}">
-  <ScrollViewer x:Name="ScrollViewerPanel">
+  <ScrollViewer x:Name="ScrollViewerPanel"
+                HorizontalScrollBarVisibility="Disabled">
     <Grid RowDefinitions="Auto,*"
           Margin="0">
       <StackPanel x:Name="TitlePanel" Margin="18,24,18,16" Orientation="Horizontal">
       </StackPanel>
-      <StackPanel x:Name="Panels"
-                  Grid.Row="1"
-                  Margin="0"
-                  Orientation="Horizontal">
-      </StackPanel>
+      <Grid x:Name="Panels"
+            Grid.Row="1"
+            Margin="0"
+            ClipToBounds="True">
+      </Grid>
     </Grid>
   </ScrollViewer>
 </UserControl>

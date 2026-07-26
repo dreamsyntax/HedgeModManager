@@ -4,7 +4,6 @@ using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
@@ -53,11 +52,6 @@ public partial class Settings : UserControl
         settingsMain.ViewModel.MainViewModel = viewModel;
         settingsMain.Settings = this;
 
-        settingsMain.Bind(Layoutable.WidthProperty, new Binding()
-        {
-            Source = ScrollViewerPanel,
-            Path = "Viewport.Width"
-        });
         settingsMain.Bind(SettingsMain.GameProperty, new Binding()
         {
             Source = viewModel,
@@ -75,6 +69,37 @@ public partial class Settings : UserControl
         UpdateTitle();
     }
 
+    private static TranslateTransform GetTranslate(Control control)
+    {
+        if (control.RenderTransform is not TranslateTransform tt)
+        {
+            tt = new TranslateTransform();
+            control.RenderTransform = tt;
+        }
+        return tt;
+    }
+
+    private static Animation CreateSlideAnimation(double toX)
+    {
+        return new Animation
+        {
+            Duration = TimeSpan.FromMilliseconds(200),
+            Easing = new LinearEasing(),
+            FillMode = FillMode.Forward,
+            Children =
+            {
+                new KeyFrame
+                {
+                    Cue = new Cue(1.0),
+                    Setters =
+                    {
+                        new Setter(TranslateTransform.XProperty, toX)
+                    }
+                }
+            }
+        };
+    }
+
     // TODO: Needs better handling
     public async Task SwitchPanel(SettingsBase? control)
     {
@@ -84,76 +109,63 @@ public partial class Settings : UserControl
         if (control == null && MainSettingsControl == Panels.Children.LastOrDefault())
             return;
 
+        double width = ScrollViewerPanel.Viewport.Width;
+        if (width <= 0)
+            width = Bounds.Width;
+
         if (MainSettingsControl != null &&
             (control == MainSettingsControl || control == null))
         {
-            Panels.Children.Insert(0, MainSettingsControl);
-            MainSettingsControl.Bind(Layoutable.WidthProperty, new Binding()
-            {
-                Source = ScrollViewerPanel,
-                Path = "Viewport.Width"
-            });
-            double xTranslate = ScrollViewerPanel.Viewport.Width * -(Panels.Children.Count - 1);
-            Panels.Margin = new Thickness(xTranslate, 0, 0, 0);
-            var animation = new Animation
-            {
-                Duration = TimeSpan.FromMilliseconds(200),
-                Easing = new LinearEasing(),
-                FillMode = FillMode.Forward,
-                Children =
-                {
-                    new KeyFrame
-                    {
+            var main = MainSettingsControl;
+            var current = Panels.Children.OfType<SettingsBase>().FirstOrDefault(c => c != main);
 
-                        Cue = new Cue(1.0),
-                        Setters =
-                        {
-                            new Setter(Panel.MarginProperty, new Thickness(0))
-                        }
-                    }
-                 }
-            };
-
-            await animation.RunAsync(Panels);
-            Panels.Margin = new Thickness(0);
-            Panels.Children.RemoveAt(1);
+            Panels.Children.Insert(0, main);
             UpdateTitle();
-        }else if (control != null)
+
+            if (current != null)
+            {
+                var mainTT = GetTranslate(main);
+                var currentTT = GetTranslate(current);
+
+                mainTT.X = -width;
+                currentTT.X = 0;
+
+                _ = CreateSlideAnimation(0).RunAsync(mainTT);
+                await CreateSlideAnimation(width).RunAsync(currentTT);
+
+                mainTT.X = 0;
+                current.RenderTransform = null;
+                Panels.Children.Remove(current);
+            }
+        }
+        else if (control != null)
         {
+            var main = Panels.Children.OfType<SettingsBase>().FirstOrDefault();
+
             Panels.Children.Add(control);
             control.Settings = this;
-            control.SettingsParent = Panels.Children.ElementAt(0) as SettingsBase;
-
-            control.Bind(Layoutable.WidthProperty, new Binding()
-            {
-                Source = ScrollViewerPanel,
-                Path = "Viewport.Width"
-            });
-            double xTranslate = ScrollViewerPanel.Viewport.Width * -(Panels.Children.Count - 1);
-            var animation = new Animation
-            {
-                Duration = TimeSpan.FromMilliseconds(200),
-                Easing = new LinearEasing(),
-                FillMode = FillMode.Forward,
-                Children =
-                {
-                    new KeyFrame
-                    {
-
-                        Cue = new Cue(1.0),
-                        Setters =
-                        {
-                            new Setter(Panel.MarginProperty, new Thickness(xTranslate, 0, 0, 0))
-                        }
-                    }
-                 }
-            };
-
-            await animation.RunAsync(Panels);
-            // TODO
+            control.SettingsParent = main;
             UpdateTitle();
-            Panels.Margin = new Thickness(0);
-            Panels.Children.RemoveAt(0);
+
+            var newTT = GetTranslate(control);
+            newTT.X = width;
+
+            if (main != null)
+            {
+                var mainTT = GetTranslate(main);
+                mainTT.X = 0;
+                _ = CreateSlideAnimation(-width).RunAsync(mainTT);
+            }
+
+            await CreateSlideAnimation(0).RunAsync(newTT);
+            // TODO
+            newTT.X = 0;
+
+            if (main != null)
+            {
+                Panels.Children.Remove(main);
+                main.RenderTransform = null;
+            }
         }
     }
 
